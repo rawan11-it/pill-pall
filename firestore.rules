@@ -1,0 +1,166 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Global Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Entity Validators ---
+
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['id', 'name', 'email'])
+        && data.keys().hasOnly(['id', 'name', 'email', 'phone', 'avatar', 'doctorName', 'doctorPhone', 'emergencyHospital', 'createdAt', 'updatedAt'])
+        && data.id == userId
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.email is string && data.email.size() > 0 && data.email.size() <= 120
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 30))
+        && (!('avatar' in data) || (data.avatar is string && data.avatar.size() <= 1000))
+        && (!('doctorName' in data) || (data.doctorName is string && data.doctorName.size() <= 100))
+        && (!('doctorPhone' in data) || (data.doctorPhone is string && data.doctorPhone.size() <= 30))
+        && (!('emergencyHospital' in data) || (data.emergencyHospital is string && data.emergencyHospital.size() <= 120));
+    }
+
+    function isValidChildProfile(data, userId) {
+      return data.keys().hasAll(['id', 'userId', 'name'])
+        && data.keys().hasOnly(['id', 'userId', 'name', 'avatar', 'age', 'weight', 'bloodType', 'allergies', 'braceletId', 'braceletBattery', 'braceletConnected', 'temperature', 'createdAt', 'updatedAt'])
+        && data.userId == userId
+        && data.id is string && data.id.size() > 0 && data.id.size() <= 128
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && (!('avatar' in data) || (data.avatar is string && data.avatar.size() <= 1000))
+        && (!('age' in data) || (data.age is string && data.age.size() <= 30))
+        && (!('weight' in data) || (data.weight is string && data.weight.size() <= 30))
+        && (!('bloodType' in data) || (data.bloodType is string && data.bloodType.size() <= 10))
+        && (!('allergies' in data) || (data.allergies is string && data.allergies.size() <= 200))
+        && (!('braceletId' in data) || (data.braceletId is string && data.braceletId.size() <= 50))
+        && (!('braceletBattery' in data) || (data.braceletBattery is number && data.braceletBattery >= 0 && data.braceletBattery <= 100))
+        && (!('braceletConnected' in data) || (data.braceletConnected is bool))
+        && (!('temperature' in data) || (data.temperature is string && data.temperature.size() <= 20));
+    }
+
+    function isValidMedication(data, userId) {
+      return data.keys().hasAll(['id', 'userId', 'childId', 'name', 'status', 'inventoryDoses'])
+        && data.keys().hasOnly(['id', 'userId', 'childId', 'name', 'strength', 'category', 'dosage', 'scheduleDescription', 'instructions', 'status', 'inventoryDoses', 'lowStockThreshold', 'type', 'lastDoseTime', 'nextDoseTime', 'completedDate', 'createdAt', 'updatedAt'])
+        && data.userId == userId
+        && data.id is string && data.id.size() > 0 && data.id.size() <= 128
+        && data.childId is string && data.childId.size() > 0 && data.childId.size() <= 128
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.status in ['active', 'as_needed', 'completed']
+        && data.inventoryDoses is number && data.inventoryDoses >= 0
+        && (!('strength' in data) || (data.strength is string && data.strength.size() <= 60))
+        && (!('category' in data) || (data.category is string && data.category.size() <= 60))
+        && (!('dosage' in data) || (data.dosage is string && data.dosage.size() <= 100))
+        && (!('scheduleDescription' in data) || (data.scheduleDescription is string && data.scheduleDescription.size() <= 150))
+        && (!('instructions' in data) || (data.instructions is string && data.instructions.size() <= 300))
+        && (!('lowStockThreshold' in data) || (data.lowStockThreshold is number && data.lowStockThreshold >= 0))
+        && (!('type' in data) || (data.type in ['pill', 'syrup', 'drops', 'injection']))
+        && (!('lastDoseTime' in data) || (data.lastDoseTime is string && data.lastDoseTime.size() <= 50))
+        && (!('nextDoseTime' in data) || (data.nextDoseTime is string && data.nextDoseTime.size() <= 50))
+        && (!('completedDate' in data) || (data.completedDate is string && data.completedDate.size() <= 50));
+    }
+
+    function isValidDoseLog(data, userId) {
+      return data.keys().hasAll(['id', 'userId', 'medicationId', 'childId', 'status'])
+        && data.keys().hasOnly(['id', 'userId', 'medicationId', 'medicationName', 'doseAmount', 'childId', 'childName', 'timestamp', 'timeString', 'dateKey', 'dateLabel', 'status', 'notes', 'createdAt'])
+        && data.userId == userId
+        && data.id is string && data.id.size() > 0 && data.id.size() <= 128
+        && data.medicationId is string && data.medicationId.size() > 0 && data.medicationId.size() <= 128
+        && data.childId is string && data.childId.size() > 0 && data.childId.size() <= 128
+        && data.status in ['taken', 'missed', 'skipped']
+        && (!('medicationName' in data) || (data.medicationName is string && data.medicationName.size() <= 120))
+        && (!('doseAmount' in data) || (data.doseAmount is string && data.doseAmount.size() <= 60))
+        && (!('childName' in data) || (data.childName is string && data.childName.size() <= 100))
+        && (!('timeString' in data) || (data.timeString is string && data.timeString.size() <= 30))
+        && (!('dateKey' in data) || (data.dateKey is string && data.dateKey.size() <= 30))
+        && (!('dateLabel' in data) || (data.dateLabel is string && data.dateLabel.size() <= 60))
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 300));
+    }
+
+    // --- Collections ---
+
+    // User Profile
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; // Users cannot enumerate other user profiles
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming(), userId);
+      allow update: if isOwner(userId)
+        && isValidId(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().id == existing().id;
+      allow delete: if isOwner(userId);
+
+      // Child Profiles Subcollection
+      match /children/{childId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(childId)
+          && incoming().id == childId
+          && isValidChildProfile(incoming(), userId);
+        allow update: if isOwner(userId)
+          && isValidId(childId)
+          && isValidChildProfile(incoming(), userId)
+          && incoming().id == existing().id
+          && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(childId);
+      }
+
+      // Medications Subcollection
+      match /medications/{medicationId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(medicationId)
+          && incoming().id == medicationId
+          && isValidMedication(incoming(), userId);
+        allow update: if isOwner(userId)
+          && isValidId(medicationId)
+          && isValidMedication(incoming(), userId)
+          && incoming().id == existing().id
+          && incoming().userId == existing().userId
+          && incoming().childId == existing().childId;
+        allow delete: if isOwner(userId) && isValidId(medicationId);
+      }
+
+      // Dose Logs Subcollection
+      match /doseLogs/{logId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(logId)
+          && incoming().id == logId
+          && isValidDoseLog(incoming(), userId);
+        allow update: if isOwner(userId)
+          && isValidId(logId)
+          && isValidDoseLog(incoming(), userId)
+          && incoming().id == existing().id
+          && incoming().userId == existing().userId
+          && incoming().medicationId == existing().medicationId
+          && incoming().childId == existing().childId;
+        allow delete: if isOwner(userId) && isValidId(logId);
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Pill Pal",
+  "description": "Smart pediatric medication reminder and adherence tracking system with smart bracelet integration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

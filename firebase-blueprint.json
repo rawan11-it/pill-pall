@@ -1,0 +1,110 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account profile for the parent or guardian",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "format": "email", "maxLength": 120 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "avatar": { "type": "string", "maxLength": 1000 },
+        "doctorName": { "type": "string", "maxLength": 100 },
+        "doctorPhone": { "type": "string", "maxLength": 30 },
+        "emergencyHospital": { "type": "string", "maxLength": 120 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "email"]
+    },
+    "ChildProfile": {
+      "title": "ChildProfile",
+      "description": "Child profile linked to smart bracelet and medication schedules",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "avatar": { "type": "string", "maxLength": 1000 },
+        "age": { "type": "string", "maxLength": 30 },
+        "weight": { "type": "string", "maxLength": 30 },
+        "bloodType": { "type": "string", "maxLength": 10 },
+        "allergies": { "type": "string", "maxLength": 200 },
+        "braceletId": { "type": "string", "maxLength": 50 },
+        "braceletBattery": { "type": "number" },
+        "braceletConnected": { "type": "boolean" },
+        "temperature": { "type": "string", "maxLength": 20 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "name"]
+    },
+    "Medication": {
+      "title": "Medication",
+      "description": "Prescribed pediatric medication details and inventory",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "childId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "strength": { "type": "string", "maxLength": 60 },
+        "category": { "type": "string", "maxLength": 60 },
+        "dosage": { "type": "string", "maxLength": 100 },
+        "scheduleDescription": { "type": "string", "maxLength": 150 },
+        "instructions": { "type": "string", "maxLength": 300 },
+        "status": { "type": "string", "enum": ["active", "as_needed", "completed"] },
+        "inventoryDoses": { "type": "number" },
+        "lowStockThreshold": { "type": "number" },
+        "type": { "type": "string", "enum": ["pill", "syrup", "drops", "injection"] },
+        "lastDoseTime": { "type": "string", "maxLength": 50 },
+        "nextDoseTime": { "type": "string", "maxLength": 50 },
+        "completedDate": { "type": "string", "maxLength": 50 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "childId", "name", "status", "inventoryDoses"]
+    },
+    "DoseLog": {
+      "title": "DoseLog",
+      "description": "Record of medication administration or missed dose event",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "medicationId": { "type": "string", "maxLength": 128 },
+        "medicationName": { "type": "string", "maxLength": 120 },
+        "doseAmount": { "type": "string", "maxLength": 60 },
+        "childId": { "type": "string", "maxLength": 128 },
+        "childName": { "type": "string", "maxLength": 100 },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "timeString": { "type": "string", "maxLength": 30 },
+        "dateKey": { "type": "string", "maxLength": 30 },
+        "dateLabel": { "type": "string", "maxLength": 60 },
+        "status": { "type": "string", "enum": ["taken", "missed", "skipped"] },
+        "notes": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "medicationId", "childId", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile document owned by the authenticated parent"
+    },
+    "/users/{userId}/children/{childId}": {
+      "schema": { "$ref": "#/entities/ChildProfile" },
+      "description": "Children profiles registered under the user account"
+    },
+    "/users/{userId}/medications/{medicationId}": {
+      "schema": { "$ref": "#/entities/Medication" },
+      "description": "Medication prescriptions associated with the user and their children"
+    },
+    "/users/{userId}/doseLogs/{logId}": {
+      "schema": { "$ref": "#/entities/DoseLog" },
+      "description": "Detailed administration logs for tracking pediatric adherence"
+    }
+  }
+}
